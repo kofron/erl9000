@@ -1,0 +1,9 @@
+*~
+*#
+#*
+ebin/*
+rebar
+lib/
+priv/*.so
+log/
+.eunit/

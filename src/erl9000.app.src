@@ -1,0 +1,12 @@
+{application, erl9000,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { erl9000_app, []}},
+  {env, []}
+ ]}.
