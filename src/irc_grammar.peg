@@ -8,15 +8,15 @@ case Node of
 end
 `;
 
-command <- word `{command, Node}`;
+command <- (word / number number number) `{command, Node}`;
 
 params <- !':' ((word / channel:channel) spc?)+`{params, Node}`;
 
 trailing <- ':' ( language )*`{trailing, Node}`;
 
-nick <- word;
+nick <- (letter / number / '_' / '-')+;
 
-host <- ('~' / '@' / '-' / '_' / '.' / letter / number)+;
+host <- ('~' / '@' / '-' / '_' / '.' / '/' / ':' / letter / number)+;
 
 channel <- ('&' / '#' / '+' / '!') letter+;
 
