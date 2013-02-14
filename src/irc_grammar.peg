@@ -1,0 +1,33 @@
+% messages follow the format: :<prefix> command <params> :<trailing>
+message <- (prefix spc)? command spc params? trailing? eol;
+
+prefix <- ':' nick:nick ('!' host:host)?`
+case Node of
+	[] -> [];
+	Other -> {prefix, lists:flatten(Node)}
+end
+`;
+
+command <- word `{command, Node}`;
+
+params <- !':' ((word / channel:channel) spc?)+`{params, Node}`;
+
+trailing <- ':' ( language )*`{trailing, Node}`;
+
+nick <- word;
+
+host <- ('~' / '@' / '-' / '_' / '.' / letter / number)+;
+
+channel <- ('&' / '#' / '+' / '!') letter+;
+
+language <- (!eol .);
+
+word <- letter+;
+
+letter <- [a-zA-Z];
+
+number <- [0-9];
+
+eol <- '\r\n';
+
+spc <- ' ';
