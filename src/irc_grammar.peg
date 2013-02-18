@@ -1,33 +1,56 @@
+% a simple PEG for Neotoma to consume for IRC message parsing.
 % messages follow the format: :<prefix> command <params> :<trailing>
-message <- (prefix spc)? command spc params? trailing? eol;
 
-prefix <- ':' nick:nick ('!' host:host)?`
-case Node of
-	[] -> [];
-	Other -> {prefix, lists:flatten(Node)}
-end
+message <- (prefix spc)? command spc (params)? (':' trailing)? eol?`
+FlatNode = lists:flatten(Node),
+lists:filter(fun erlang:is_tuple/1, lists:flatten(Node))
 `;
 
-command <- (word / number number number) `{command, Node}`;
+% the prefix is optional and can either be nick!host, or nick
+prefix <- ':' nick:nick? ('!'? host:host)?`
+Tuples = lists:filter(fun erlang:is_tuple/1, lists:flatten(Node)),
+BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+lists:map(fun({K,V}) -> {K, lists:foldr(BCat, <<>>, V)} end, Tuples)
+`;
 
-params <- !':' ((word / channel:channel) spc?)+`{params, Node}`;
+% still need to implement service commands here.
+command <- (word / number+) `
+BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+{command, lists:foldr(BCat, <<>>, Node)}
+`;
 
-trailing <- ':' ( language )*`{trailing, Node}`;
+params <- (!':' (channel:channel / param:language+) (spc / eol))+`
+Tuples = lists:filter(fun erlang:is_tuple/1, lists:flatten(Node)),
+
+BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+
+lists:map(fun({K,V}) -> {K, lists:foldr(BCat, <<>>, lists:flatten(V))} end, Tuples)
+`;
+
+trailing <- ( (language spc?)* )`
+Flat = lists:flatten(lists:filter(fun(X) -> X =/= <<":">> end, Node)),
+BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+{trailing, lists:foldr(BCat, <<>>, Flat)}
+`;
 
 nick <- (letter / number / '_' / '-')+;
 
 host <- ('~' / '@' / '-' / '_' / '.' / '/' / ':' / letter / number)+;
 
-channel <- ('&' / '#' / '+' / '!') letter+;
+channel <- (('&' / '#' / '+' / '!') letter+);
 
-language <- (!eol .);
-
-word <- letter+;
-
-letter <- [a-zA-Z];
+any <- (number / letter)+;
 
 number <- [0-9];
 
+language <- (!eol !spc .);
+
+word <- (letter)+;
+
+letter <- [a-zA-Z];
+
 eol <- '\r\n';
+
+bot_command <- '!' ( language )+;
 
 spc <- ' ';
