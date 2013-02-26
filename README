@@ -1,0 +1,10 @@
+needs:
+
+inets, crypto, public_key, ssl
+
+httpc:request(get, {"https://user:pass@basecamp.com/1780990/api/v1/projects.json", [{"User-Agent","MyApp (yourname@example.com)"}]},[],[]).
+
+for posting/creating msgs
+"https://kofron:1ca3tA@basecamp.com/1780990/api/v1/projects/2215321/messages.json",[{"User-Agent","testing 123"}],"application/json",JMsg
+
+"https://kofron:1ca3tA@basecamp.com/1780990/api/v1/projects/2215321/messages/8970834/comments.json"

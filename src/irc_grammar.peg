@@ -27,19 +27,24 @@ BCat = fun(A, B) -> <<A/binary, B/binary>> end,
 lists:map(fun({K,V}) -> {K, lists:foldr(BCat, <<>>, lists:flatten(V))} end, Tuples)
 `;
 
-trailing <- ( (language spc?)* )`
-Flat = lists:flatten(lists:filter(fun(X) -> X =/= <<":">> end, Node)),
-BCat = fun(A, B) -> <<A/binary, B/binary>> end,
-{trailing, lists:foldr(BCat, <<>>, Flat)}
+trailing <- ( bot_command:bot_command / (language spc*)* )`
+Res = case Node of
+		{bot_command, Stuff} ->
+			Tuples = lists:filter(fun erlang:is_tuple/1, lists:flatten(Stuff)),
+			BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+			lists:map(fun({K,V}) -> {K, lists:foldr(BCat, <<>>, lists:flatten(V))} end, Tuples);
+		Other ->
+			BCat = fun(A, B) -> <<A/binary, B/binary>> end,
+			{trailing, lists:foldr(BCat, <<>>, lists:flatten(Other))}
+	end,
+Res
 `;
 
-nick <- (letter / number / '_' / '-')+;
+nick <- (letter / number / '_' / '-' / '`')+;
 
 host <- ('~' / '@' / '-' / '_' / '.' / '/' / ':' / letter / number)+;
 
 channel <- (('&' / '#' / '+' / '!') letter+);
-
-any <- (number / letter)+;
 
 number <- [0-9];
 
@@ -51,6 +56,6 @@ letter <- [a-zA-Z];
 
 eol <- '\r\n';
 
-bot_command <- '!' ( language )+;
+bot_command <- '!' bot_cmd_name:letter+ (spc bot_cmd_arg:(language spc?)*)?;
 
 spc <- ' ';

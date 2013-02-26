@@ -21,17 +21,17 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-	Bot = {
-    	bot,
+	Overlord = {
+    	overlord,
     	{
-			bot,
+			overlord,
 			start_link,
-			["irc.freenode.net",6667,<<"p8bot">>,<<"#projecteight">>]
+			[]
       	},
       	permanent,
       	5000,
-      	worker,
-      	[bot]
+      	supervisor,
+      	[overlord]
     },
-    {ok, { {one_for_one, 5, 10}, [Bot]} }.
+    {ok, { {one_for_one, 5, 10}, [Overlord]} }.
 

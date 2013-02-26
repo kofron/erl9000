@@ -1,12 +1,15 @@
--module(log).
-
--behaviour(gen_event).
+-module(bot_ev_mgr).
+-behavior(gen_event).
 
 %% gen_event callbacks
--export([init/1, handle_event/2, handle_call/2, 
+-export([start_link/2, init/1, handle_event/2, handle_call/2, 
 	 handle_info/2, terminate/2, code_change/3]).
 
--record(state, {}).
+-record(state, {handlers}).
+
+start_link(MgrName, _BotName) ->
+	gen_event:start_link({local, MgrName}).
+
 %%====================================================================
 %% gen_event callbacks
 %%====================================================================
@@ -16,7 +19,7 @@
 %% this function is called to initialize the event handler.
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, #state{}}.
+    {ok, #state{handlers=[]}}.
 
 %%--------------------------------------------------------------------
 %% Function:  
@@ -40,9 +43,15 @@ handle_event(_Event, State) ->
 %% gen_event:call/3,4, this function is called for the specified event 
 %% handler to handle the request.
 %%--------------------------------------------------------------------
-handle_call(_Request, State) ->
-    Reply = ok,
-    {ok, Reply, State}.
+handle_call({register, Handler}, #state{handlers=Handlers}=State) ->
+	{Reply, NewState} = case lists:member(Handler, Handlers) of
+			true ->
+				{already_added, State};
+			false ->
+				gen_event:add_sup_handler(self(), Handler),
+				{ok, State#state{handlers=[Handler|Handlers]}}
+			end,
+    {ok, Reply, NewState}.
 
 %%--------------------------------------------------------------------
 %% Function: 
@@ -53,7 +62,8 @@ handle_call(_Request, State) ->
 %% an event manager receives any other message than an event or a synchronous
 %% request (or a system message).
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info(Info, State) ->
+	lager:info("INFO: ~p~n",[Info]),
     {ok, State}.
 
 %%--------------------------------------------------------------------
