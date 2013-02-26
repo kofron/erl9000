@@ -4,15 +4,22 @@
 -type nick_type() :: maybe_type(binary()).
 -type host_type() :: maybe_type(binary()).
 -type command_type() :: maybe_type(binary()).
+-type command_par_type() :: maybe_type([binary()]).
 -type channel_type() :: maybe_type(binary()).
 -type msg_type() :: maybe_type(binary()).
+-type bot_cmd_type() :: maybe_type(binary()).
+-type bot_cmd_args_type() :: maybe_type(binary()).
 -type error_tuple() :: {error, term()}.
 -record(irc, {
-				send_nick = none :: nick_type(),
-				send_host = none :: host_type(),
-				command   = none :: command_type(),
-				channel   = none :: channel_type(),
-				msg       = none :: msg_type()
+				nick  = none :: nick_type(),
+				host  = none :: host_type(),
+				cmd   = none :: command_type(),
+				cmd_par = none :: command_par_type(),
+				chn   = none :: channel_type(),
+				trail = none :: msg_type(),
+				bot_cmd = none :: bot_cmd_type(),
+				bot_cmd_args = none :: bot_cmd_args_type(),
+				raw = <<>> :: msg_type()
 			}).
 
 -opaque irc_data() :: #irc{}.
@@ -25,7 +32,7 @@
 
 -spec new() -> irc_data().
 new() ->
-	[].
+	#irc{}.
 
 -spec to_n(irc_data()) -> binary().
 to_n(#irc{}) ->
@@ -37,11 +44,31 @@ from_n(Bin) ->
 		{fail, _Reason}=Err ->
 			Err;
 		AnyOther ->
-			{ok, [{raw,Bin}|AnyOther]}
+			rec_from_parsed(AnyOther,#irc{raw=Bin})
 	end.
 
-get_bot_cmd(IRCData) ->
-	proplists:get_value(bot_cmd_name, IRCData).
+-spec rec_from_parsed(term(), irc_data()) -> {ok, irc_data()} | error_tuple().
+rec_from_parsed([], IRCData) ->
+	{ok, IRCData};
+rec_from_parsed([{nick, Nick}|R],IRCData) ->
+	rec_from_parsed(R, IRCData#irc{nick=Nick});
+rec_from_parsed([{host, Host}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{host=Host});
+rec_from_parsed([{channel, Chn}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{chn=Chn});
+rec_from_parsed([{command, Cmd}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{cmd=Cmd});
+rec_from_parsed([{trailing, Trl}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{trail=Trl});
+rec_from_parsed([{bot_cmd_name, BotCmd}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{bot_cmd=BotCmd});
+rec_from_parsed([{param, P}|R], #irc{cmd_par=none}=IRCData) ->
+	rec_from_parsed(R, IRCData#irc{cmd_par=[P]});
+rec_from_parsed([{param, P}|R], #irc{cmd_par=Pars}=IRCData) ->
+	rec_from_parsed(R, IRCData#irc{cmd_par=Pars ++ [P]}).
+
+get_bot_cmd(#irc{bot_cmd=BC}) ->
+	BC.
 
 get_trailing(IRCData) ->
 	case get_bot_cmd(IRCData) of
@@ -51,14 +78,14 @@ get_trailing(IRCData) ->
 			<<>>
 	end.
 
-get_raw(IRCData) ->
-	proplists:get_value(raw, IRCData).
+get_raw(#irc{raw=Raw}) ->
+	Raw.
 
-get_command(IRCData) ->
-	proplists:get_value(command, IRCData).
+get_command(#irc{cmd=Cmd}) ->
+	Cmd.
 
-get_nick(IRCData) ->
-	proplists:get_value(nick, IRCData).
+get_nick(#irc{nick=Nick}) ->
+	Nick.
 
 %%%%%%%%%%%%%
 %%% EUNIT %%%
