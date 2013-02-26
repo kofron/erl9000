@@ -27,8 +27,8 @@
 % "constructors"
 -export([new/0, to_n/1, from_n/1]).
 -export([get_bot_cmd/1, get_trailing/1, 
-		get_nick/1,
-		get_raw/1, get_command/1]).
+		get_nick/1, get_host/1, get_channel/1,
+		get_raw/1, get_command/1, get_cmd_pars/1]).
 
 -spec new() -> irc_data().
 new() ->
@@ -80,11 +80,20 @@ get_trailing(#irc{bot_cmd=BC, bot_cmd_args=BA}) ->
 get_raw(#irc{raw=Raw}) ->
 	Raw.
 
+get_host(#irc{host=Host}) ->
+	Host.
+
 get_command(#irc{cmd=Cmd}) ->
 	Cmd.
 
 get_nick(#irc{nick=Nick}) ->
 	Nick.
+
+get_cmd_pars(#irc{cmd_par=Pars}) ->
+	Pars.
+
+get_channel(#irc{chn = Chn}) ->
+	Chn.
 
 %%%%%%%%%%%%%
 %%% EUNIT %%%
@@ -92,35 +101,94 @@ get_nick(#irc{nick=Nick}) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-privmsg_parse_test() ->
+privmsg_parse_nick_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
+	{ok, R} = from_n(Src),
+	?assertEqual(<<"kofron">>, irc_data:get_nick(R)).
 
-long_privmsg_parse_test() ->
+privmsg_parse_host_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
+	{ok, R} = from_n(Src),
+	?assertEqual(<<"~kofron@D-173-250-190-122.dhcp4.washington.edu">>, irc_data:get_host(R)).
+
+privmsg_parse_command_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"PRIVMSG">>, irc_data:get_command(R)).
+
+privmsg_parse_channel_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"#projecteight">>,irc_data:get_channel(R)).
+
+privmsg_parse_trailing_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"hi">>, irc_data:get_trailing(R)).
+
+long_privmsg_parse_nick_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi this is a long message\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"kofron">>, irc_data:get_nick(R)).
 
-ipv6_host_parse_test() ->
-	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
+long_privmsg_parse_host_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi this is a long message\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"~kofron@D-173-250-190-122.dhcp4.washington.edu">>, irc_data:get_host(R)).
 
-service_parse_test() ->
+long_privmsg_parse_command_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi this is a long message\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"PRIVMSG">>, irc_data:get_command(R)).
+
+long_privmsg_parse_channel_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi this is a long message\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"#projecteight">>,irc_data:get_channel(R)).
+
+long_privmsg_parse_trailing_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hi this is a long message\r\n">>,
+	{ok,R} = from_n(Src),
+	?assertEqual(<<"hi this is a long message">>, irc_data:get_trailing(R)).
+
+service_parse_nick_test() ->
 	T = <<":services. 328 zoltar05131983 #ubuntu :http://www.ubuntu.com\r\n">>,
-	{C, _R} = from_n(T),
-	?assertEqual(ok, C).
+	{ok,R} = from_n(T),
+	?assertEqual(<<"services">>, irc_data:get_nick(R)).
+
+service_parse_command_test() ->
+	T = <<":services. 328 zoltar05131983 #ubuntu :http://www.ubuntu.com\r\n">>,
+	{ok,R} = from_n(T),
+	?assertEqual(<<"328">>, irc_data:get_command(R)).
+
+service_parse_trailing_test() ->
+	T = <<":services. 328 zoltar05131983 #ubuntu :http://www.ubuntu.com\r\n">>,
+	{ok,R} = from_n(T),
+	?assertEqual(<<"http://www.ubuntu.com">>, irc_data:get_trailing(R)).
+
+service_parse_channel_test() ->
+	T = <<":services. 328 zoltar05131983 #ubuntu :http://www.ubuntu.com\r\n">>,
+	{ok,R} = from_n(T),
+	?assertEqual(<<"#ubuntu">>, irc_data:get_channel(R)).
+
+service_parse_cmd_pars_test() ->
+	T = <<":services. 328 zoltar05131983 #ubuntu :http://www.ubuntu.com\r\n">>,
+	{ok,R} = from_n(T),
+	Tgt = [<<"zoltar05131983">>],
+	?assertEqual(Tgt, irc_data:get_cmd_pars(R)).
 
 service_2_parse_test() ->
 	T = <<":hobana.freenode.net 333 zoltar05131983 #ubuntu IdleOne!~idleone@ubuntu/member/idleone 1351468761\r\n">>,
-	{C, _R} = from_n(T),
-	?assertEqual(ok, C).
+	{ok,R} = from_n(T),
+	TgtPar = [<<"zoltar05131983">>, 
+			<<"IdleOne!~idleone@ubuntu/member/idleone">>, 
+			<<"1351468761">>],
+	?assertEqual(TgtPar, irc_data:get_cmd_pars(R)).
 
-bot_command_parse_test() ->
+bot_command_parse_nick_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :!hello\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
+	{ok, R} = from_n(Src),
+	?assertEqual(<<"kofron">>, irc_data:get_nick(R)).
 
 bot_command_with_args_trailing_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :!hello a b c\r\n">>,
@@ -128,15 +196,13 @@ bot_command_with_args_trailing_test() ->
 	{ok, R} = from_n(Src),
 	?assertEqual(Trl, irc_data:get_trailing(R)).
 
-bot_command_parse_2_test() ->
+bot_command_parse_2_nick_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hello !hello\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
+	{ok, R} = from_n(Src),
+	?assertEqual(<<"kofron">>, irc_data:get_nick(R)).
 
 weird_name_test() ->
 	Src = <<":MK`!mk@unaffiliated/mk/x-7191235 PRIVMSG #ubuntu :_Dude_: can you install ia32-libs?\r\n">>,
-	{C, _R} = from_n(Src),
-	?assertEqual(ok, C).
-
-
+	{ok, R} = from_n(Src),
+	?assertEqual(<<"MK`">>, irc_data:get_nick(R)).
 -endif.
