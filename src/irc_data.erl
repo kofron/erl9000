@@ -62,6 +62,8 @@ rec_from_parsed([{trailing, Trl}|R], IRCData) ->
 	rec_from_parsed(R, IRCData#irc{trail=Trl});
 rec_from_parsed([{bot_cmd_name, BotCmd}|R], IRCData) ->
 	rec_from_parsed(R, IRCData#irc{bot_cmd=BotCmd});
+rec_from_parsed([{bot_cmd_arg, BotArg}|R], IRCData) ->
+	rec_from_parsed(R, IRCData#irc{bot_cmd_args=BotArg});
 rec_from_parsed([{param, P}|R], #irc{cmd_par=none}=IRCData) ->
 	rec_from_parsed(R, IRCData#irc{cmd_par=[P]});
 rec_from_parsed([{param, P}|R], #irc{cmd_par=Pars}=IRCData) ->
@@ -72,8 +74,8 @@ get_bot_cmd(#irc{bot_cmd=BC}) ->
 
 get_trailing(#irc{bot_cmd=none, trail=Trl}) ->
     Trl;
-get_trailing(#irc{bot_cmd=BC, trail=Trl}) ->
-    <<>>.
+get_trailing(#irc{bot_cmd=BC, bot_cmd_args=BA}) ->
+	erl9000_util:bcat([<<$!>>,BC,<<" ">>,BA]).
 
 get_raw(#irc{raw=Raw}) ->
 	Raw.
@@ -119,6 +121,12 @@ bot_command_parse_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :!hello\r\n">>,
 	{C, _R} = from_n(Src),
 	?assertEqual(ok, C).
+
+bot_command_with_args_trailing_test() ->
+	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :!hello a b c\r\n">>,
+	Trl = <<"!hello a b c">>,
+	{ok, R} = from_n(Src),
+	?assertEqual(Trl, irc_data:get_trailing(R)).
 
 bot_command_parse_2_test() ->
 	Src = <<":kofron!~kofron@D-173-250-190-122.dhcp4.washington.edu PRIVMSG #projecteight :hello !hello\r\n">>,
