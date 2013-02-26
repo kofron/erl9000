@@ -70,13 +70,10 @@ rec_from_parsed([{param, P}|R], #irc{cmd_par=Pars}=IRCData) ->
 get_bot_cmd(#irc{bot_cmd=BC}) ->
 	BC.
 
-get_trailing(IRCData) ->
-	case get_bot_cmd(IRCData) of
-		undefined ->
-			proplists:get_value(trailing, IRCData);
-		_BotCmd ->
-			<<>>
-	end.
+get_trailing(#irc{bot_cmd=none, trail=Trl}) ->
+    Trl;
+get_trailing(#irc{bot_cmd=BC, trail=Trl}) ->
+    <<>>.
 
 get_raw(#irc{raw=Raw}) ->
 	Raw.
